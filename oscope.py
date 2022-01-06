@@ -65,13 +65,13 @@ def scan_plot(bp, window):
 	on_the_fly = not bp.cont_support
 	plot = {}
 	font = pygame.font.Font(None, 19)
-	
+
 	if on_the_fly:
 		prev_trig = None
 		maxv = None
 		minv = None
 		prev_time_div = None
-	
+
 	if(trig_mode != NO_SYNC):
 		voltage = bp.read()
 		for k in range(2,2000):
@@ -82,26 +82,26 @@ def scan_plot(bp, window):
 				break
 			if((voltage < trigger_level) and (voltage > 0.01) and (prev_voltage > voltage/TRIG_CAL) and (trig_mode == FALLING_SLOPE)):
 				break
-		
+
 	for i in range(RES_X):
-		
+
 		for k in range(time_div - 1):
 			#ignoring (time_div-1) samples to achieve proper time resolution
 			bp.read()
 		plot[i] = bp.read()
-		
+
 		if not on_the_fly:
 			continue
-		
+
 		if(i!=0):
 			plot_update(window, i, plot[i], plot[i-1])
-		
+
 		if prev_trig is None or trigger_level != prev_trig:
 			if prev_trig is not None:
 				draw_trig(window, prev_trig, background)
 			draw_trig(window)
 			prev_trig = trigger_level
-		
+
 		if maxv is None or plot[i] > maxv:
 			if maxv is not None:
 				window.fill(background,prev_maxv_Rect)
@@ -112,16 +112,16 @@ def scan_plot(bp, window):
 				window.fill(background,prev_minv_Rect)
 			minv = plot[i]
 			prev_minv_Rect = draw_minv(window, font, minv)
-		
+
 		if prev_time_div is None or time_div != prev_time_div:
 			if prev_time_div is not None:
 				window.fill(background,prev_time_Rect)
 			prev_time_Rect = draw_time(window, font)
 			prev_time_div = time_div
-		
-		pygame.display.flip() 
+
+		pygame.display.flip()
 		handle_events()
-	
+
 	if not on_the_fly:
 		draw_plot(window, font, plot)
 		pygame.display.flip()
@@ -130,7 +130,7 @@ def scan_plot(bp, window):
 def draw_plot(window, font, plot):
 	for i in range(1,RES_X):
 			plot_update(window, i, plot[i], plot[i-1])
-	
+
 	draw_trig(window)
 	draw_maxv(window, font, max(plot.values()))
 	draw_minv(window, font, min(plot.values()))
@@ -141,7 +141,7 @@ def plot_update(window, i, voltage, prev_voltage):
 	x = i
 	px = i-1;
 	py = (RES_Y) - prev_voltage*(RES_Y/MAX_VOLTAGE) - OFFSET
-	pygame.draw.line(window, line, (px, py), (x, y))	
+	pygame.draw.line(window, line, (px, py), (x, y))
 
 def draw_trig(window, value=None, color=None):
 	if value is None:
@@ -172,33 +172,33 @@ def handle_events():
 	global time_div
 	global trig_mode
 	global trigger_level
-			
-	for event in pygame.event.get(): 
-		if event.type == pygame.QUIT: 
-			sys.exit(0) 	
+
+	for event in pygame.event.get():
+		if event.type == pygame.QUIT:
+			sys.exit(0)
 		elif event.type == pygame.KEYDOWN:
 			if event.key == pygame.K_0:
-				print "timescale x 2"
+				print('timescale x 2')
 				time_div = time_div * 2
 			elif event.key == pygame.K_9:
 				if (time_div >= 2):
-					print "timescale / 2"
+					print('timescale / 2')
 					time_div = time_div / 2
 			elif event.key == pygame.K_s:
-				print "Trigger of, no sync"
+				print('Trigger of, no sync')
 				trig_mode = NO_SYNC
 			elif event.key == pygame.K_f:
-				print "Trigger set to falling slope"
+				print('Trigger set to falling slope')
 				trig_mode = FALLING_SLOPE
 			elif event.key == pygame.K_r:
-				print "Trigger set to rising slope"
+				print('Trigger set to rising slope')
 				trig_mode = RISING_SLOPE
 			elif event.key == pygame.K_UP:
 				trigger_level += TRIGGER_LEV_RES
-				print "Trigger level: %f" % trigger_level
+				print('Trigger level: {:f}'.format(trigger_level))
 			elif event.key == pygame.K_DOWN:
 				trigger_level -= TRIGGER_LEV_RES
-				print "Trigger levelL: %f" % trigger_level
+				print('Trigger levelL: {:f}'.format(trigger_level))
 			elif event.key == pygame.K_q:
 				sys.exit(0)
 
@@ -206,40 +206,40 @@ class VoltageProbe(object):
 	# Buffering more than 13 bytes causes the Bus Pirate to miss buffered
 	# commands, and interpret commands incorrectly, until reset.
 	WRITE_LIMIT = 13
-	
+
 	def __init__(self, bp):
 		self.bp = bp
-		
+
 		self.cont_support = not version or version >= (5, 9)
 		if self.cont_support:
 			self.bp.port.write(byte(VOLTAGE_CONT))
 		else:
 			self.pending = self.WRITE_LIMIT
 			self.bp.port.write(byte(VOLTAGE) * self.pending)
-	
+
 	def read(self):
 		measure = self.bp.response(2, True)
 		voltage = ord(measure[0]) << 8
 		voltage = voltage + ord(measure[1])
 		voltage = (voltage/1024.0) * 6.6
-		
+
 		if not self.cont_support:
 			self.bp.port.write(byte(VOLTAGE))
-		
+
 		return voltage
-	
+
 	def close(self):
 		if not self.cont_support:
 			self.bp.response(self.pending * 2)
 			self.pending = 0
-	
+
 	def __del__(self):
 		self.close()
 
 # Turn a byte value into an unambiguous byte (not unicode) string
 byte = chr
 
-pygame.init() 
+pygame.init()
 
 bp = BBIO(BUS_PIRATE_DEV,115200)
 
@@ -256,45 +256,45 @@ try:
 	if not bp.response():
 		raise EnvironmentError("Bus Pirate reset failed")
 	banner = bp.port.read(bp.port.inWaiting())
-	
+
 	prefix = b"Firmware v"
 	try:
 		pos = banner.rindex(prefix) + len(prefix)
 		end = banner.index(".", pos)
 		major = int(banner[pos:end])
-		
+
 		pos = end + 1
 		end = pos
 		while end < len(banner) and banner[end].isdigit():
 			end += 1
 		minor = int(banner[pos:end])
-	
+
 	except ValueError:
 		raise EnvironmentError("Could not parse firmware version")
-	
+
 	version = (major, minor)
-	print "Firmware version: {0}.{1}".format(*version)
+	print('Firmware version: {0}.{1}'.format(*version))
 
 except EnvironmentError:
 	sys.excepthook(*sys.exc_info())
 	version = None
 
-print "Entering binmode: ",
+print('Entering binmode: '),
 if not bp.BBmode():
-	print "failed."
+	print('failed.')
 	sys.exit()
 try:
-	print "OK."
-		
-	window = pygame.display.set_mode((RES_X, RES_Y)) 
+	print('OK.')
+
+	window = pygame.display.set_mode((RES_X, RES_Y))
 	background = (0,0,0)
 	line = (0,255,0)
 	trig_color = (100,100,0)
-	
+
 	time_div = DEFAULT_TIME_DIV
 	trigger_level = DEFAULT_TRIGGER_LEV
 	trig_mode = DEFAULT_TRIGGER_MODE
-	
+
 	with closing(VoltageProbe(bp)) as voltage:
 		while 1:
 			scan_plot(voltage, window)
